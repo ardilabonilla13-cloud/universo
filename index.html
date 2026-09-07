@@ -235,6 +235,18 @@
     counterEl.textContent = openedCount + '/' + totalMemories;
     universeScene.appendChild(counterEl);
 
+    const zoomWrap = document.createElement('div');
+    zoomWrap.style.cssText = 'position:absolute; bottom:16px; right:14px; z-index:6; display:flex; flex-direction:column; gap:8px;';
+    universeScene.appendChild(zoomWrap);
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.textContent = '+';
+    zoomInBtn.style.cssText = 'width:40px; height:40px; border-radius:50%; border:1px solid rgba(255,233,168,0.4); background:rgba(21,10,46,0.7); color:#ffe9a8; font-size:20px; line-height:1; cursor:pointer;';
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.textContent = '\u2212';
+    zoomOutBtn.style.cssText = zoomInBtn.style.cssText;
+    zoomWrap.appendChild(zoomInBtn);
+    zoomWrap.appendChild(zoomOutBtn);
+
     function maybeShowFinal(){
       if (openedCount === totalMemories && !allOpenedShown){
         allOpenedShown = true;
@@ -432,10 +444,10 @@
     scene.add(sunGlow);
 
     const starGeo = new THREE.BufferGeometry();
-    const starCount = 700;
+    const starCount = 900;
     const positions = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount; i++) {
-      const r = 800 + Math.random() * 500;
+      const r = 700 + Math.random() * 500;
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos((Math.random() * 2) - 1);
       positions[i*3] = r * Math.sin(phi) * Math.cos(theta);
@@ -443,7 +455,16 @@
       positions[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
     }
     starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.4, transparent: true, opacity: 0.8 }));
+    const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({
+      color: 0xffffff,
+      size: 5,
+      sizeAttenuation: false,
+      transparent: true,
+      opacity: 0.95,
+      map: glowTexture('rgba(255,255,255,0.95)'),
+      blending: THREE.AdditiveBlending,
+      depthWrite: false
+    }));
     scene.add(starField);
 
     function addMoon(parentMesh, dist, size, color, speed) {
@@ -619,10 +640,16 @@
     }
     updateCamera();
 
+    const ZOOM_MIN = 140, ZOOM_MAX = 1000;
+    zoomInBtn.addEventListener('click', () => { camDist = Math.max(ZOOM_MIN, camDist - 60); updateCamera(); });
+    zoomOutBtn.addEventListener('click', () => { camDist = Math.min(ZOOM_MAX, camDist + 60); updateCamera(); });
+
     let dragging = false, lastX = 0, lastY = 0, moved = 0;
+    let pinching = false, pinchStartDist = 0, pinchStartCam = 0;
+
     function down(x,y){ dragging = true; lastX = x; lastY = y; moved = 0; mount.style.cursor = 'grabbing'; }
     function move(x,y){
-      if (!dragging) return;
+      if (!dragging || pinching) return;
       const dx = x - lastX, dy = y - lastY;
       moved += Math.abs(dx) + Math.abs(dy);
       camTheta -= dx * 0.006;
@@ -639,12 +666,41 @@
     mount.addEventListener('mousedown', e => down(e.clientX, e.clientY));
     window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
     window.addEventListener('mouseup', e => up(e.clientX, e.clientY));
-    mount.addEventListener('touchstart', e => { const t = e.touches[0]; down(t.clientX, t.clientY); }, { passive: true });
-    mount.addEventListener('touchmove', e => { const t = e.touches[0]; move(t.clientX, t.clientY); }, { passive: true });
-    mount.addEventListener('touchend', e => { up(lastX, lastY); }, { passive: true });
+
+    mount.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        pinching = true;
+        dragging = false;
+        const t0 = e.touches[0], t1 = e.touches[1];
+        pinchStartDist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        pinchStartCam = camDist;
+      } else if (e.touches.length === 1) {
+        pinching = false;
+        const t = e.touches[0];
+        down(t.clientX, t.clientY);
+      }
+    }, { passive: true });
+
+    mount.addEventListener('touchmove', e => {
+      if (pinching && e.touches.length === 2) {
+        const t0 = e.touches[0], t1 = e.touches[1];
+        const dist = Math.hypot(t1.clientX - t0.clientX, t1.clientY - t0.clientY);
+        const scale = pinchStartDist / Math.max(dist, 1);
+        camDist = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, pinchStartCam * scale));
+        updateCamera();
+      } else if (e.touches.length === 1) {
+        const t = e.touches[0];
+        move(t.clientX, t.clientY);
+      }
+    }, { passive: true });
+
+    mount.addEventListener('touchend', e => {
+      if (e.touches.length < 2) pinching = false;
+      if (e.touches.length === 0) up(lastX, lastY);
+    }, { passive: true });
 
     mount.addEventListener('wheel', e => {
-      camDist = Math.min(Math.max(camDist + e.deltaY * 0.3, 140), 1000);
+      camDist = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, camDist + e.deltaY * 0.3));
       updateCamera();
     }, { passive: true });
 
