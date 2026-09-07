@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Nuestro universo</title>
+<style>
+  html, body { margin:0; padding:0; height:100%; overflow:hidden; background:#05010f; }
+  @keyframes pulseText { 0%,100%{opacity:0.4;} 50%{opacity:0.85;} }
+</style>
+</head>
+<body>
+<div id="stage" style="position:relative; width:100%; height:100vh; height:100dvh; background:#05010f; font-family:Georgia,serif;">
+
+  <div id="beachScene" style="position:absolute; inset:0; cursor:pointer; opacity:1; transition:opacity 0.9s ease; -webkit-tap-highlight-color:transparent; touch-action:manipulation;">
+    <div style="position:absolute; top:0; left:0; width:100%; height:62%; background:linear-gradient(180deg,#040311 0%,#140e30 55%,#2c1f52 100%);"></div>
+    <canvas id="beachStars" style="position:absolute; top:0; left:0; width:100%; height:62%;"></canvas>
+    <div id="moon" style="position:absolute; top:9%; right:14%; width:11%; aspect-ratio:1/1; border-radius:50%; background:radial-gradient(circle at 35% 30%, #fffef2, #f4ecc8 60%, #d8cd9e 100%); box-shadow:0 0 28px 10px rgba(255,250,220,0.35); z-index:3;"></div>
+    <div style="position:absolute; top:62%; left:0; width:100%; height:20%; background:linear-gradient(180deg,#16244a 0%,#0a1226 100%); z-index:1;"></div>
+    <canvas id="seaCanvas" style="position:absolute; top:62%; left:0; width:100%; height:20%; z-index:2;"></canvas>
+    <canvas id="sandCanvas" style="position:absolute; top:82%; left:0; width:100%; height:18%; z-index:1;"></canvas>
+
+    <div id="promptEl" style="position:absolute; top:5%; width:100%; text-align:center; color:#f3e9ff; font-size:4vw; letter-spacing:2px; opacity:0.75; z-index:5; animation:pulseText 2.4s ease-in-out infinite; pointer-events:none;">toca el cielo para entrar a nuestro universo</div>
+  </div>
+
+  <div id="universeScene" style="position:absolute; inset:0; display:none; opacity:0; transition:opacity 0.9s ease;"></div>
+
+  <div id="overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(5,1,15,0.92); display:none; align-items:center; justify-content:center; z-index:10; padding:20px; box-sizing:border-box;">
+    <div style="background:#150a2e; border:1px solid rgba(255,233,168,0.4); border-radius:16px; padding:26px; max-width:88%; max-height:78%; overflow-y:auto; text-align:center; color:#f3e9ff;">
+      <h2 id="card-title" style="font-size:17px; color:#ffe9a8; margin-bottom:12px; letter-spacing:1px;"></h2>
+      <p id="card-text" style="font-size:13px; line-height:1.7; color:#ded4f2; text-align:left; white-space:pre-line;"></p>
+      <button id="close-btn" style="margin-top:16px; background:none; border:1px solid rgba(255,233,168,0.5); color:#ffe9a8; padding:6px 16px; border-radius:20px; cursor:pointer; font-size:12px; letter-spacing:1px;">cerrar</button>
+    </div>
+  </div>
+
+  <div id="finalOverlay" style="position:absolute; top:0; left:0; width:100%; height:100%; background:radial-gradient(circle at center, rgba(40,15,60,0.96), rgba(3,1,10,0.98)); display:none; align-items:center; justify-content:center; z-index:12; opacity:0; transition:opacity 1s ease;">
+    <div style="text-align:center; padding:30px;">
+      <div style="font-size:15px; letter-spacing:3px; color:#c9beff; opacity:0.8; margin-bottom:14px;">abriste las 23 estrellas</div>
+      <div id="finalMessageText" style="font-size:8vw; color:#ffe9a8; text-shadow:0 0 30px rgba(255,220,140,0.7), 0 0 60px rgba(255,180,220,0.4); font-style:italic; margin-bottom:20px;">te amo mi cielo</div>
+      <button id="final-close-btn" style="background:none; border:1px solid rgba(255,233,168,0.5); color:#ffe9a8; padding:8px 20px; border-radius:20px; cursor:pointer; font-size:12px; letter-spacing:1px;">cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+  const beachScene = document.getElementById('beachScene');
+  const universeScene = document.getElementById('universeScene');
+  const beachCanvas = document.getElementById('beachStars');
+  const bctx = beachCanvas.getContext('2d');
+  const seaCanvas = document.getElementById('seaCanvas');
+  const sctx = seaCanvas.getContext('2d');
+  const sandCanvas = document.getElementById('sandCanvas');
+  const sandCtx = sandCanvas.getContext('2d');
+
+  function drawSand(){
+    const w = sandCanvas.width, h = sandCanvas.height;
+    if (!w || !h) return;
+    sandCtx.clearRect(0,0,w,h);
+    const grad = sandCtx.createLinearGradient(0,0,0,h);
+    grad.addColorStop(0, '#2c221b');
+    grad.addColorStop(1, '#130e0a');
+    sandCtx.fillStyle = grad;
+    sandCtx.fillRect(0,0,w,h);
+    for (let i=0;i<900;i++){
+      const x = Math.random()*w, y = Math.random()*h, r = 0.4+Math.random()*1.1;
+      sandCtx.beginPath();
+      sandCtx.arc(x,y,r,0,Math.PI*2);
+      sandCtx.fillStyle = Math.random()>0.5 ? 'rgba(210,190,150,' + (0.05+Math.random()*0.12) + ')' : 'rgba(20,14,10,' + (0.15+Math.random()*0.2) + ')';
+      sandCtx.fill();
+    }
+    for (let i=0;i<50;i++){
+      const x = Math.random()*w, y = Math.random()*h, r = 3+Math.random()*8;
+      sandCtx.beginPath();
+      sandCtx.ellipse(x,y,r,r*0.5,Math.random()*Math.PI,0,Math.PI*2);
+      sandCtx.fillStyle = 'rgba(60,46,34,' + (0.08+Math.random()*0.1) + ')';
+      sandCtx.fill();
+    }
+    for (let i=0;i<10;i++){
+      const y = Math.random()*h;
+      sandCtx.beginPath();
+      sandCtx.moveTo(0,y);
+      for (let x=0;x<=w;x+=20){
+        sandCtx.lineTo(x, y + Math.sin(x*0.05+i)*2);
+      }
+      sandCtx.strokeStyle = 'rgba(200,180,140,0.04)';
+      sandCtx.lineWidth = 1;
+      sandCtx.stroke();
+    }
+  }
+
+  function resizeCanvases(){
+    const bw = beachCanvas.clientWidth, bh = beachCanvas.clientHeight;
+    if (bw && bh) { beachCanvas.width = bw; beachCanvas.height = bh; }
+    const sw = seaCanvas.clientWidth, sh = seaCanvas.clientHeight;
+    if (sw && sh) { seaCanvas.width = sw; seaCanvas.height = sh; }
+    const dw = sandCanvas.clientWidth, dh = sandCanvas.clientHeight;
+    if (dw && dh) { sandCanvas.width = dw; sandCanvas.height = dh; }
+    drawSand();
+  }
+  resizeCanvases();
+  requestAnimationFrame(() => requestAnimationFrame(resizeCanvases));
+  window.addEventListener('load', resizeCanvases);
+  window.addEventListener('resize', resizeCanvases);
+
+  const beachStars = [];
+  for (let i=0;i<160;i++){
+    beachStars.push({ xf: Math.random(), yf: Math.random(), r: Math.random()*1.6+0.6, a: Math.random(), s: Math.random()*0.02+0.006 });
+  }
+
+  const shimmerDashes = [];
+  for (let i=0;i<16;i++){
+    shimmerDashes.push({ yFrac: Math.random(), phase: Math.random()*10, speed: 1.5+Math.random()*2, len: 6+Math.random()*14, xJitter: Math.random()*10-5 });
+  }
+
+  let t = 0;
+  function drawBeach(){
+    t += 0.02;
+    if (beachCanvas.width && beachCanvas.height) {
+      bctx.clearRect(0,0,beachCanvas.width,beachCanvas.height);
+      beachStars.forEach(st => {
+        st.a += st.s;
+        const alpha = Math.abs(Math.sin(st.a));
+        bctx.beginPath();
+        bctx.arc(st.xf*beachCanvas.width, st.yf*beachCanvas.height, st.r, 0, Math.PI*2);
+        bctx.fillStyle = 'rgba(255,255,255,' + (0.3+alpha*0.7) + ')';
+        bctx.fill();
+      });
+    }
+
+    if (seaCanvas.width && seaCanvas.height) {
+      sctx.clearRect(0,0,seaCanvas.width,seaCanvas.height);
+      const w = seaCanvas.width, h = seaCanvas.height;
+      for (let i=0;i<5;i++){
+        const baseY = h*0.15 + i*(h*0.15);
+        sctx.beginPath();
+        for (let x=0;x<=w;x+=6){
+          const yy = baseY + Math.sin(x*0.05 + t*(1.2+i*0.2) + i) * (2+i*0.6);
+          x===0 ? sctx.moveTo(x,yy) : sctx.lineTo(x,yy);
+        }
+        sctx.strokeStyle = 'rgba(255,255,255,' + (0.06+i*0.015) + ')';
+        sctx.lineWidth = 1;
+        sctx.stroke();
+      }
+
+      const shimmerX = w*0.81;
+      shimmerDashes.forEach(d => {
+        const alpha = Math.max(0, Math.sin(t*d.speed + d.phase));
+        const y = d.yFrac * h;
+        const jitter = Math.sin(t*d.speed*0.7 + d.phase) * d.xJitter;
+        sctx.beginPath();
+        sctx.moveTo(shimmerX + jitter - d.len/2, y);
+        sctx.lineTo(shimmerX + jitter + d.len/2, y);
+        sctx.strokeStyle = 'rgba(255,250,220,' + (alpha*0.55) + ')';
+        sctx.lineWidth = 1.6;
+        sctx.stroke();
+      });
+    }
+
+    requestAnimationFrame(drawBeach);
+  }
+  drawBeach();
+
+  let universeInitialized = false;
+  let transitioning = false;
+
+  function goToUniverse(){
+    if (transitioning) return;
+    transitioning = true;
+    beachScene.style.opacity = '0';
+    beachScene.style.pointerEvents = 'none';
+    setTimeout(() => {
+      beachScene.style.display = 'none';
+      universeScene.style.display = 'block';
+      if (!universeInitialized) { initUniverse(); universeInitialized = true; }
+      requestAnimationFrame(() => {
+        universeScene.style.opacity = '1';
+        transitioning = false;
+      });
+    }, 900);
+  }
+
+  let activated = false;
+  function handleActivate(e){
+    if (activated) return;
+    activated = true;
+    setTimeout(() => { activated = false; }, 1200);
+    goToUniverse();
+  }
+  beachScene.addEventListener('click', handleActivate);
+  beachScene.addEventListener('touchend', function(e){ handleActivate(e); }, { passive: true });
+
+  function goToBeach(){
+    if (transitioning) return;
+    transitioning = true;
+    universeScene.style.opacity = '0';
+    setTimeout(() => {
+      universeScene.style.display = 'none';
+      beachScene.style.display = 'block';
+      beachScene.style.pointerEvents = 'auto';
+      requestAnimationFrame(() => {
+        beachScene.style.opacity = '1';
+        transitioning = false;
+        resizeCanvases();
+      });
+    }, 900);
+  }
+
+  function initUniverse(){
+    const overlay = document.getElementById('overlay');
+    const cardTitle = document.getElementById('card-title');
+    const cardText = document.getElementById('card-text');
+    const closeBtn = document.getElementById('close-btn');
+    const finalOverlay = document.getElementById('finalOverlay');
+    const finalCloseBtn = document.getElementById('final-close-btn');
+    let allOpenedShown = false;
+
+    const mount = document.createElement('div');
+    mount.style.cssText = 'position:absolute; top:0; left:0; width:100%; height:100%; cursor:grab; touch-action:none;';
+    universeScene.appendChild(mount);
+    const hint = document.createElement('div');
+    hint.style.cssText = 'position:absolute; top:14px; width:100%; text-align:center; color:#f3e9ff; font-size:5vw; letter-spacing:2px; opacity:0.85; text-shadow:0 0 20px rgba(180,140,255,0.6); pointer-events:none; z-index:5;';
+    hint.textContent = 'El universo de nosotros';
+    universeScene.appendChild(hint);
+    const hint2 = document.createElement('div');
+    hint2.style.cssText = 'position:absolute; bottom:10px; width:100%; text-align:center; color:#7c6a99; font-size:2.6vw; letter-spacing:0.5px; opacity:0.7; pointer-events:none; z-index:5; padding:0 6px; box-sizing:border-box;';
+    hint2.textContent = 'arrastra para girar · toca una estrella dorada · el agujero negro te lleva a la playa';
+    universeScene.appendChild(hint2);
+
+    const counterEl = document.createElement('div');
+    const totalMemories = 23;
+    let openedCount = 0;
+    counterEl.style.cssText = 'position:absolute; top:14px; right:14px; color:#ffe9a8; font-size:13px; letter-spacing:1px; opacity:0.9; z-index:6; background:rgba(21,10,46,0.6); padding:4px 10px; border-radius:12px; border:1px solid rgba(255,233,168,0.3);';
+    counterEl.textContent = openedCount + '/' + totalMemories;
+    universeScene.appendChild(counterEl);
+
+    function maybeShowFinal(){
+      if (openedCount === totalMemories && !allOpenedShown){
+        allOpenedShown = true;
+        finalOverlay.style.display = 'flex';
+        requestAnimationFrame(() => { finalOverlay.style.opacity = '1'; });
+      }
+    }
+    finalCloseBtn.addEventListener('click', () => {
+      finalOverlay.style.opacity = '0';
+      setTimeout(() => { finalOverlay.style.display = 'none'; }, 600);
+    });
+
+    const width = mount.clientWidth || window.innerWidth, height = mount.clientHeight || window.innerHeight;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, width/height, 1, 4000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    renderer.outputEncoding = THREE.sRGBEncoding;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 0.8;
+    mount.appendChild(renderer.domElement);
+    const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+    scene.add(new THREE.HemisphereLight(0x14162a, 0x05020a, 0.4));
+    const sunLight = new THREE.PointLight(0xfff1d0, 2.0, 2400, 1.6);
+    scene.add(sunLight);
+    const fillLight = new THREE.PointLight(0x2a3a66, 0.3, 2400, 2);
+    fillLight.position.set(-300, 120, -300);
+    scene.add(fillLight);
+
+    function glowTexture(hex) {
+      const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+      const g = c.getContext('2d');
+      const grad = g.createRadialGradient(32,32,0,32,32,32);
+      grad.addColorStop(0, hex); grad.addColorStop(0.4, hex); grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad; g.fillRect(0,0,64,64);
+      return new THREE.CanvasTexture(c);
+    }
+    function mkCanvas(w,h){ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; }
+    function toTex(c){ const t = new THREE.CanvasTexture(c); t.wrapS = THREE.RepeatWrapping; t.anisotropy = maxAniso; return t; }
+    function speckle(g, w, h, count, minR, maxR, colorFn) {
+      for (let i=0;i<count;i++){
+        const x = Math.random()*w, y = Math.random()*h, r = minR + Math.random()*(maxR-minR);
+        g.fillStyle = colorFn();
+        g.beginPath(); g.ellipse(x,y,r,r*(0.4+Math.random()*0.5),Math.random()*Math.PI,0,Math.PI*2); g.fill();
+      }
+    }
+    function sunTexture() {
+      const c = mkCanvas(512,256); const g = c.getContext('2d');
+      g.fillStyle = '#e0ac3f'; g.fillRect(0,0,512,256);
+      speckle(g,512,256,320,3,10, () => Math.random()>0.5 ? 'rgba(210,120,25,0.4)' : 'rgba(230,210,160,0.4)');
+      speckle(g,512,256,700,1,3, () => Math.random()>0.5 ? 'rgba(200,95,15,0.3)' : 'rgba(230,215,180,0.3)');
+      return toTex(c);
+    }
+    function mercuryTexture() {
+      const c = mkCanvas(512,256); const g = c.getContext('2d');
+      g.fillStyle = '#9c948b'; g.fillRect(0,0,512,256);
+      speckle(g,512,256,60,6,16, () => 'rgba(60,54,48,0.4)');
+      speckle(g,512,256,260,2,7, () => Math.random()>0.5 ? 'rgba(70,64,58,0.5)' : 'rgba(205,197,187,0.4)');
+      speckle(g,512,256,500,1,2.5, () => 'rgba(120,112,104,0.35)');
+      return toTex(c);
+    }
+    function venusTexture() {
+      const c = mkCanvas(512,256); const g = c.getContext('2d');
+      g.fillStyle = '#d9b978'; g.fillRect(0,0,512,256);
+      for (let y=0;y<256;y+=7){
+        g.strokeStyle = 'rgba(169,134,63,0.3)'; g.lineWidth = 4;
+        g.beginPath();
+        for (let x=0;x<=512;x+=8){
+          const yy = y + Math.sin((x/512)*Math.PI*6 + y*0.3)*6;
+          x===0 ? g.moveTo(x,yy) : g.lineTo(x,yy);
+        }
+        g.stroke();
+      }
+      speckle(g,512,256,200,2,6, () => 'rgba(240,222,180,0.2)');
+      return toTex(c);
+    }
+    function earthTexture() {
+      const c = mkCanvas(512,256); const g = c.getContext('2d');
+      g.fillStyle = '#1f4f8f'; g.fillRect(0,0,512,256);
+      speckle(g,512,256,80,3,7, () => 'rgba(40,90,160,0.4)');
+      for (let i=0;i<30;i++){
+        const x = Math.random()*512, y = 60+Math.random()*140, r = 18+Math.random()*40;
+        g.fillStyle = Math.random()>0.4 ? '#3f7d3f' : '#6b8f4e';
+        g.beginPath(); g.ellipse(x,y,r,r*0.6,Math.random()*Math.PI,0,Math.PI*2); g.fill();
+      }
+      speckle(g,512,256,140,3,10, () => 'rgba(90,60,30,0.15)');
+      speckle(g,512,256,90,10,26, () => 'rgba(255,255,255,0.18)');
+      g.fillStyle = 'rgba(255,255,255,0.9)';
+      g.fillRect(0,0,512,12); g.fillRect(0,244,512,12);
+      return toTex(c);
+    }
+    function marsTexture() {
+      const c = mkCanvas(512,256); const g = c.getContext('2d');
+      g.fillStyle = '#c1552c'; g.fillRect(0,0,512,256);
+      speckle(g,512,256,90,10,28, () => Math.random()>0.5 ? 'rgba(122,47,22,0.4)' : 'rgba(224,150,110,0.3)');
+      speckle(g,512,256,300,2,6, () => Math.random()>0.5 ? 'rgba(90,35,15,0.3)' : 'rgba(230,170,130,0.25)');
+      g.fillStyle = 'rgba(255,255,255,0.75)';
+      g.fillRect(0,0,512,8); g.fillRect(0,248,512,8);
+      return toTex(c);
+    }
+    function bandedTexture(baseColors, spotColor) {
+      const c = mkCanvas(512,256); const g = c.getContext('2d');
+      const bands = baseColors.length; const bandH = 256/bands;
+      for (let i=0;i<bands;i++){ g.fillStyle = baseColors[i]; g.fillRect(0, i*bandH, 512, bandH+1); }
+      for (let i=0;i<=bands;i++){
+        g.strokeStyle = 'rgba(255,255,255,0.1)'; g.lineWidth = 3;
+        g.beginPath();
+        const y0 = i*bandH;
+        for (let x=0;x<=512;x+=8){
+          const yy = y0 + Math.sin((x/512)*Math.PI*7 + i*1.3)*5;
+          x===0 ? g.moveTo(x,yy) : g.lineTo(x,yy);
+        }
+        g.stroke();
+      }
+      speckle(g,512,256,120,2,8, () => 'rgba(255,255,255,0.06)');
+      if (spotColor) { g.fillStyle = spotColor; g.beginPath(); g.ellipse(340,140,32,18,0,0,Math.PI*2); g.fill(); }
+      return toTex(c);
+    }
+    function uranusTexture() {
+      const c = mkCanvas(512,256); const g = c.getContext('2d');
+      g.fillStyle = '#9fd8d1'; g.fillRect(0,0,512,256);
+      for (let y=0;y<256;y+=18){ g.fillStyle = 'rgba(150,210,205,0.22)'; g.fillRect(0,y,512,10); }
+      speckle(g,512,256,60,3,10, () => 'rgba(200,240,235,0.15)');
+      return toTex(c);
+    }
+    function neptuneTexture() {
+      const c = mkCanvas(512,256); const g = c.getContext('2d');
+      g.fillStyle = '#3f5fc7'; g.fillRect(0,0,512,256);
+      for (let y=0;y<256;y+=16){
+        g.strokeStyle = 'rgba(255,255,255,0.12)'; g.lineWidth = 3;
+        g.beginPath();
+        for (let x=0;x<=512;x+=8){
+          const yy = y + Math.sin((x/512)*Math.PI*6 + y*0.2)*5;
+          x===0 ? g.moveTo(x,yy) : g.lineTo(x,yy);
+        }
+        g.stroke();
+      }
+      g.fillStyle = 'rgba(20,30,80,0.5)'; g.beginPath(); g.ellipse(180,110,26,18,0,0,Math.PI*2); g.fill();
+      return toTex(c);
+    }
+    function moonTexture(base) {
+      const c = mkCanvas(128,64); const g = c.getContext('2d');
+      g.fillStyle = base; g.fillRect(0,0,128,64);
+      speckle(g,128,64,40,2,6, () => 'rgba(0,0,0,0.15)');
+      speckle(g,128,64,20,1,3, () => 'rgba(255,255,255,0.15)');
+      return toTex(c);
+    }
+    function irregularRockGeometry(radius, subdiv, jitter) {
+      const geo = new THREE.IcosahedronGeometry(radius, subdiv);
+      const pos = geo.attributes.position;
+      for (let i=0;i<pos.count;i++){
+        const x=pos.getX(i), y=pos.getY(i), z=pos.getZ(i);
+        const n = 1 + (Math.random()-0.5)*jitter;
+        pos.setXYZ(i, x*n, y*n, z*n);
+      }
+      geo.computeVertexNormals();
+      return geo;
+    }
+    function rockTextures() {
+      const craters = [];
+      for (let i=0;i<32;i++) craters.push({ x: Math.random()*128, y: Math.random()*128, r: 3+Math.random()*11 });
+      const colC = mkCanvas(128,128); const cg = colC.getContext('2d');
+      cg.fillStyle = '#8f8578'; cg.fillRect(0,0,128,128);
+      for (let i=0;i<45;i++){
+        const x=Math.random()*128, y=Math.random()*128, r=4+Math.random()*15;
+        cg.fillStyle = Math.random()>0.5 ? 'rgba(120,108,92,0.35)' : 'rgba(68,60,52,0.35)';
+        cg.beginPath(); cg.ellipse(x,y,r,r*0.7,Math.random()*Math.PI,0,Math.PI*2); cg.fill();
+      }
+      craters.forEach(cr => {
+        const grad = cg.createRadialGradient(cr.x,cr.y,0,cr.x,cr.y,cr.r);
+        grad.addColorStop(0,'rgba(35,30,26,0.65)'); grad.addColorStop(0.7,'rgba(35,30,26,0.3)'); grad.addColorStop(1,'rgba(35,30,26,0)');
+        cg.fillStyle = grad; cg.beginPath(); cg.arc(cr.x,cr.y,cr.r,0,Math.PI*2); cg.fill();
+      });
+      const colorMap = toTex(colC);
+      const bumpC = mkCanvas(128,128); const bg = bumpC.getContext('2d');
+      bg.fillStyle = '#7d7d7d'; bg.fillRect(0,0,128,128);
+      craters.forEach(cr => {
+        const grad = bg.createRadialGradient(cr.x,cr.y,0,cr.x,cr.y,cr.r);
+        grad.addColorStop(0,'#1c1c1c'); grad.addColorStop(0.6,'#3c3c3c'); grad.addColorStop(1,'#7d7d7d');
+        bg.fillStyle = grad; bg.beginPath(); bg.arc(cr.x,cr.y,cr.r,0,Math.PI*2); bg.fill();
+      });
+      const bumpMap = toTex(bumpC);
+      return { colorMap, bumpMap };
+    }
+
+    const sunGeo = new THREE.SphereGeometry(12, 48, 48);
+    const sunMat = new THREE.MeshBasicMaterial({ map: sunTexture() });
+    const sun = new THREE.Mesh(sunGeo, sunMat);
+    scene.add(sun);
+    const sunGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('rgba(230,170,80,0.6)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    sunGlow.scale.set(70, 70, 1);
+    scene.add(sunGlow);
+
+    const starGeo = new THREE.BufferGeometry();
+    const starCount = 700;
+    const positions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const r = 800 + Math.random() * 500;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos((Math.random() * 2) - 1);
+      positions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+      positions[i*3+1] = r * Math.cos(phi);
+      positions[i*3+2] = r * Math.sin(phi) * Math.sin(theta);
+    }
+    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.4, transparent: true, opacity: 0.8 }));
+    scene.add(starField);
+
+    function addMoon(parentMesh, dist, size, color, speed) {
+      const pivot = new THREE.Object3D();
+      pivot.rotation.y = Math.random() * Math.PI * 2;
+      parentMesh.add(pivot);
+      const geo = new THREE.SphereGeometry(size, 16, 16);
+      const mat = new THREE.MeshStandardMaterial({ map: moonTexture(color), roughness: 0.9 });
+      const moon = new THREE.Mesh(geo, mat);
+      moon.position.set(dist, 0, 0);
+      pivot.add(moon);
+      return { pivot, speed };
+    }
+    const moons = [];
+
+    const planetData = [
+      { name: 'Mercurio', radius: 2.0, orbit: 40,  speed: 0.014, tex: mercuryTexture, rough: 0.95 },
+      { name: 'Venus',    radius: 3.6, orbit: 56,  speed: 0.010, tex: venusTexture, rough: 0.6 },
+      { name: 'Tierra',   radius: 3.8, orbit: 72,  speed: 0.008, tex: earthTexture, rough: 0.55 },
+      { name: 'Marte',    radius: 2.8, orbit: 90,  speed: 0.006, tex: marsTexture, rough: 0.85 },
+      { name: 'Jupiter',  radius: 9.5, orbit: 128, speed: 0.0032,tex: () => bandedTexture(['#c9a876','#e0c99b','#b8895c','#e8cba6','#c9a876'], 'rgba(180,70,40,0.6)'), rough: 0.7 },
+      { name: 'Saturno',  radius: 8.2, orbit: 158, speed: 0.0024,tex: () => bandedTexture(['#e6d3a3','#f6e3b8','#d8bd85','#f0dcab'], null), rough: 0.7, ring: true },
+      { name: 'Urano',    radius: 5.6, orbit: 184, speed: 0.0017,tex: uranusTexture, rough: 0.5 },
+      { name: 'Neptuno',  radius: 5.4, orbit: 210, speed: 0.0012,tex: neptuneTexture, rough: 0.5 }
+    ];
+
+    const planets = [];
+    planetData.forEach(d => {
+      const geo = new THREE.SphereGeometry(d.radius, 40, 40);
+      const mat = new THREE.MeshStandardMaterial({ map: d.tex(), roughness: d.rough, metalness: 0.04 });
+      const mesh = new THREE.Mesh(geo, mat);
+      scene.add(mesh);
+      if (d.ring) {
+        const ringGeo = new THREE.RingGeometry(d.radius*1.4, d.radius*2.2, 64);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xd8bd85, side: THREE.DoubleSide, transparent: true, opacity: 0.55 });
+        const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+        ringMesh.rotation.x = Math.PI/2 - 0.3;
+        mesh.add(ringMesh);
+      }
+      if (d.name === 'Tierra') moons.push(addMoon(mesh, 8, 1.0, '#c9c5bd', 0.03));
+      if (d.name === 'Marte') { moons.push(addMoon(mesh, 5, 0.35, '#a89c8c', 0.05)); moons.push(addMoon(mesh, 6.8, 0.3, '#9a8f80', 0.038)); }
+      if (d.name === 'Jupiter') {
+        moons.push(addMoon(mesh, 14, 1.1, '#cbb98f', 0.02));
+        moons.push(addMoon(mesh, 17, 1.0, '#d8d2c0', 0.016));
+        moons.push(addMoon(mesh, 21, 1.4, '#a89a86', 0.012));
+        moons.push(addMoon(mesh, 25, 1.3, '#8f8676', 0.009));
+      }
+      if (d.name === 'Saturno') moons.push(addMoon(mesh, 20, 1.5, '#d8bd85', 0.014));
+      if (d.name === 'Urano') moons.push(addMoon(mesh, 12, 0.9, '#b8c9c5', 0.018));
+      if (d.name === 'Neptuno') moons.push(addMoon(mesh, 11, 1.0, '#a9b8d8', 0.02));
+      planets.push({ mesh, orbit: d.orbit, speed: d.speed, angle: Math.random()*Math.PI*2 });
+    });
+
+    const beltPivot = new THREE.Object3D();
+    scene.add(beltPivot);
+    const beltCount = 130;
+    const { colorMap: beltColorMap, bumpMap: beltBumpMap } = rockTextures();
+    const beltGeo = irregularRockGeometry(1, 1, 0.5);
+    const beltMat = new THREE.MeshStandardMaterial({ map: beltColorMap, bumpMap: beltBumpMap, bumpScale: 0.5, roughness: 0.95 });
+    const beltMesh = new THREE.InstancedMesh(beltGeo, beltMat, beltCount);
+    const beltData = [];
+    for (let i=0;i<beltCount;i++){
+      beltData.push({
+        radius: 100 + Math.random()*18, angle: Math.random()*Math.PI*2, y: (Math.random()-0.5) * 4,
+        scaleX: 0.35 + Math.random()*0.9, scaleY: 0.35 + Math.random()*0.9, scaleZ: 0.35 + Math.random()*0.9,
+        rot: new THREE.Vector3(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI),
+        spin: new THREE.Vector3((Math.random()-0.5)*0.02, (Math.random()-0.5)*0.02, (Math.random()-0.5)*0.02)
+      });
+    }
+    beltPivot.add(beltMesh);
+
+    const wanderers = [];
+    for (let i=0;i<6;i++){
+      const s = 1.5 + Math.random()*2.5;
+      const { colorMap, bumpMap } = rockTextures();
+      const geo = irregularRockGeometry(s, 1, 0.55);
+      const mat = new THREE.MeshStandardMaterial({ map: colorMap, bumpMap: bumpMap, bumpScale: s*0.2, roughness: 0.95 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set((Math.random()-0.5)*900, (Math.random()-0.5)*300, (Math.random()-0.5)*900);
+      scene.add(mesh);
+      const vel = new THREE.Vector3((Math.random()-0.5)*0.4, (Math.random()-0.5)*0.08, (Math.random()-0.5)*0.4);
+      const spin = new THREE.Vector3(Math.random()*0.01, Math.random()*0.01, Math.random()*0.01);
+      wanderers.push({ mesh, vel, spin });
+    }
+
+    const cometGeo = irregularRockGeometry(2.2, 1, 0.4);
+    const cometMat = new THREE.MeshStandardMaterial({ color: 0xdff2ff, emissive: 0x113355, roughness: 0.5 });
+    const comet = new THREE.Mesh(cometGeo, cometMat);
+    scene.add(comet);
+    let cometPos = new THREE.Vector3(-500, 80, 300);
+    const cometVel = new THREE.Vector3(1.6, -0.1, -1.1);
+    const trailLength = 24;
+    const trailPositions = new Float32Array(trailLength * 3);
+    for (let i=0;i<trailLength;i++){ trailPositions[i*3]=cometPos.x; trailPositions[i*3+1]=cometPos.y; trailPositions[i*3+2]=cometPos.z; }
+    const trailGeo = new THREE.BufferGeometry();
+    trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPositions, 3));
+    const trailMat = new THREE.PointsMaterial({ color: 0xbfe3ff, size: 2.6, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false });
+    const trailPoints = new THREE.Points(trailGeo, trailMat);
+    scene.add(trailPoints);
+    const trailHistory = [];
+
+    const blackHoleGroup = new THREE.Object3D();
+    blackHoleGroup.position.set(340, 90, -330);
+    scene.add(blackHoleGroup);
+    const bhCore = new THREE.Mesh(new THREE.SphereGeometry(13, 32, 32), new THREE.MeshBasicMaterial({ color: 0x000000 }));
+    blackHoleGroup.add(bhCore);
+    function diskTexture() {
+      const c = mkCanvas(256,256); const g = c.getContext('2d');
+      const grad = g.createRadialGradient(128,128,20,128,128,128);
+      grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(0.35, 'rgba(255,190,120,0.7)');
+      grad.addColorStop(0.6, 'rgba(180,110,220,0.45)'); grad.addColorStop(1, 'rgba(60,40,90,0)');
+      g.fillStyle = grad; g.fillRect(0,0,256,256);
+      return new THREE.CanvasTexture(c);
+    }
+    const bhDisk = new THREE.Mesh(new THREE.RingGeometry(15, 34, 64), new THREE.MeshBasicMaterial({ map: diskTexture(), side: THREE.DoubleSide, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    bhDisk.rotation.x = Math.PI/2.4;
+    blackHoleGroup.add(bhDisk);
+    const bhGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('rgba(180,130,220,0.4)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    bhGlow.scale.set(60,60,1);
+    blackHoleGroup.add(bhGlow);
+    const bhHitSphere = new THREE.Mesh(new THREE.SphereGeometry(30, 12, 12), new THREE.MeshBasicMaterial({ visible: false }));
+    blackHoleGroup.add(bhHitSphere);
+
+    const memories = [
+      { title: '1. Si tuviera que explicarte cuánto te amo…', text: 'Si tuviera que explicarte cuánto te amo, probablemente no encontraría suficientes palabras. Porque lo que siento por ti no cabe en un mensaje, ni en una fecha, ni siquiera en todos los momentos que hemos vivido juntos. Te amo por lo que eres, por cómo me haces sentir y por la tranquilidad que encuentro simplemente estando a tu lado.' },
+      { title: '2. Me encanta estar contigo', text: 'Me encanta estar contigo incluso cuando no estamos haciendo absolutamente nada. Me gusta hablar contigo durante horas, reírnos por cualquier bobada, molestarnos, compartir nuestros días y simplemente saber que estás ahí. Contigo aprendí que no siempre se necesitan grandes planes para tener un momento increíble.' },
+      { title: '3. Te elegiría otra vez', text: 'Si pudiera regresar al momento en que nuestras vidas se cruzaron, volvería a elegirte. Volvería a buscarte, volvería a conocerte y volvería a enamorarme de ti. Porque después de todo lo que hemos vivido, sigo sintiendo que tenerte en mi vida es una de las cosas más bonitas que me han pasado.' },
+      { title: '4. Gracias por existir en mi vida', text: 'Gracias por cada conversación, cada abrazo, cada beso, cada risa y cada momento en el que simplemente has estado conmigo. Gracias por ser esa persona con la que puedo compartir mis cosas buenas y también mis días no tan buenos. Te quiero muchísimo y espero que nunca dudes de lo importante que eres para mí.' },
+      { title: '5. Lo que provocas en mí', text: 'Hay algo en ti que todavía no sé explicar. Puedes cambiar completamente mi día con un mensaje, una mirada, una sonrisa o simplemente estando cerca. Me encanta esa sensación de saber que tengo a alguien tan especial a quien quiero cuidar, abrazar, consentir y hacer feliz.' },
+      { title: '6. Mi lugar favorito', text: 'No sé si tengo un lugar favorito en el mundo, pero sí sé que mi lugar favorito es donde estoy contigo. Puede ser una salida, nuestra casa, un carro, caminando por ahí o simplemente sentados hablando de cualquier cosa. Si estás tú, cualquier lugar termina sintiéndose especial.' },
+      { title: '7. Me enamora hasta lo pequeño', text: 'Me enamoran muchas cosas de ti, incluso esas pequeñas cosas que probablemente tú ni siquiera notas. Tu manera de hablar, tus gestos, tus ocurrencias, la forma en que te ríes y hasta esas cosas que haces que a veces me vuelven loco. Me encanta conocerte cada día un poquito más y descubrir nuevas razones para quererte.' },
+      { title: '8. Cuando pienso en nosotros…', text: 'Cuando pienso en nosotros, pienso en todas esas pequeñas historias que hemos ido construyendo sin darnos cuenta. En las risas, las conversaciones, los momentos difíciles que hemos superado y todos esos instantes que solamente nosotros entendemos. Y me gusta pensar que todavía nos quedan muchísimas historias por escribir juntos.' },
+      { title: '9. No quiero solamente los momentos bonitos', text: 'Te amo no solamente por los momentos bonitos, sino también por todo lo que hemos aprendido juntos. Porque una relación no se trata de que todo sea perfecto, sino de encontrar a alguien con quien quieras seguir estando incluso cuando las cosas se ponen difíciles. Y yo quiero seguir eligiéndote, cuidándote y construyendo contigo.' },
+      { title: '10. Si esto fuera solamente el comienzo…', text: 'Si después de todo este tiempo todavía me emociono al verte, todavía me gusta escucharte, todavía disfruto pasar tiempo contigo y todavía siento todas esas mariposas cuando estamos juntos, entonces solo puedo imaginar todo lo que nos falta por vivir. Esto que estamos construyendo me encanta, pero lo que más me emociona es pensar que nuestra historia todavía tiene muchísimas páginas por escribir.' },
+      { title: '11. Algunas de las cosas que amo de nosotros', text: 'Hay cosas que quizás para ti parecen pequeñas, pero para mí significan muchísimo. Momentos, costumbres y detalles que poco a poco se fueron convirtiendo en parte de mi vida. Y creo que eso es justamente lo bonito de nosotros: que no todo tiene que ser extraordinario para convertirse en un recuerdo que quiero guardar para siempre.' },
+      { title: '12. Mi copiloto favorita', text: 'Me encanta tenerte como mi copiloto. Puede parecer una bobada, pero para mí significa mucho compartir esos recorridos contigo. Saber que vas atrás, que estamos juntos y que de alguna manera estamos recorriendo el camino juntos. Creo que hasta los trayectos más normales se sienten diferentes cuando eres tú quien va conmigo.' },
+      { title: '13. Gracias por enseñarme a valorar más a mi familia', text: 'Una de las cosas que más valoro de ti es que, sin darte cuenta, me has hecho darle todavía más importancia a compartir tiempo con mi familia. Me gusta verte compartir con ellos, verte hacer parte de esos momentos y sentir que poco a poco también estás entrando en una parte muy importante de mi vida. Eso significa muchísimo para mí.' },
+      { title: '14. Me encanta consentirte', text: 'Me encanta consentirte. Me gusta invitarte, sorprenderte, darte detalles y buscar cualquier excusa para hacerte sentir especial. No porque espere algo a cambio, sino porque me nace hacerlo contigo. Me hace feliz verte feliz, y creo que una de mis formas favoritas de demostrarte cuánto te quiero es precisamente cuidándote y consintiéndote.' },
+      { title: '15. Nuestros viajes', text: 'No hemos tenido miles de viajes ni necesitamos tenerlos para que sean importantes. Los que hemos hecho los guardo con muchísimo cariño porque fueron momentos que compartimos nosotros. Y creo que lo bonito no está solamente en el lugar al que fuimos, sino en haberlo conocido juntos, haber creado una historia nueva y tener ahora otro recuerdo que solamente nosotros podemos contar.' },
+      { title: '16. Cuando conociste a mi familia', text: 'Que hayas conocido a mi familia también es algo que valoro muchísimo. Porque no cualquiera entra en esa parte de mi vida. Para mí significa que nuestra relación ha ido creciendo y que has empezado a formar parte de espacios que son importantes para mí. Me gusta poder verte ahí, compartiendo conmigo y con las personas que quiero.' },
+      { title: '17. Mi cumpleaños', text: 'Todavía tengo muy presente la forma tan bonita en la que me trataste durante mi cumpleaños. Puede que haya pasado el tiempo, pero hay detalles que simplemente se quedan. Y el tuyo se quedó conmigo de una manera muy especial.' },
+      { title: '18. La carta que todavía guardo', text: 'Y hay algo que probablemente demuestra más que cualquier palabra lo mucho que significó para mí: todavía tengo la carta que me diste ese día guardada en mi billetera. Podría haberla dejado en cualquier lugar, pero decidí llevarla conmigo. Porque cada vez que la veo, recuerdo ese momento, lo que sentí y lo bonito que fue recibir algo hecho desde el corazón por ti.' },
+      { title: '19. Verte en mi futuro', text: 'Me encanta saber que me ves en tus planes a futuro. Que cuando hablas de lo que quieres, de lo que sueñas y de las cosas que quieres vivir, de alguna manera yo aparezco ahí. No sabes lo bonito que se siente saber que alguien que amas también se imagina compartiendo contigo lo que viene.' },
+      { title: '20. Los momentos sencillos', text: 'También amo todos esos momentos que probablemente nunca vamos a considerar "grandes recuerdos". Estar juntos, hablar, comer algo, salir, reírnos, molestarnos, pasar tiempo sin hacer nada especial. Porque con el tiempo uno se da cuenta de que son precisamente esos momentos sencillos los que terminan haciendo una relación tan especial.' },
+      { title: '21. Lo que hemos recorrido', text: 'Cuando miro todo lo que hemos vivido, me gusta pensar que hemos recorrido un camino juntos. Hemos tenido viajes, momentos bonitos, días increíbles y seguramente también momentos que nos han puesto a prueba. Pero seguimos aquí. Y eso para mí tiene muchísimo valor.' },
+      { title: '22. Si algún día dudas…', text: 'Si algún día dudas de cuánto te amo, quiero que recuerdes todas estas pequeñas cosas. Recuerda que me encanta tenerte como mi copiloto, que me encanta consentirte, viajar contigo, compartirte con mi familia, guardar tu carta en mi billetera y saber que me ves en tu futuro. Quizás no siempre encuentre la manera perfecta de decirlo, pero cada una de esas cosas es mi manera de decirte: te amo y me encanta compartir mi vida contigo.' },
+      { title: '23. Y todavía falta muchísimo…', text: 'Y quizás lo más bonito de todo es que esta lista no termina aquí. Porque todavía nos faltan muchísimos viajes, muchísimas noches hablando, muchísimas fotos, muchísimas risas, muchas carreteras, muchas aventuras y muchísimos recuerdos que todavía ni siquiera existen.\n\nY espero estar ahí para vivirlos todos contigo.' }
+    ];
+    const memoryMeshes = [];
+    memories.forEach((m, i) => {
+      const angle = (i / memories.length) * Math.PI * 2 + 0.35;
+      const r = 250 + (i % 4) * 18;
+      const y = Math.sin(i * 1.7) * 70;
+      const geo = new THREE.SphereGeometry(3.6, 16, 16);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xf0d99a });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(r * Math.cos(angle), y, r * Math.sin(angle));
+      mesh.userData = { title: m.title, text: m.text, index: i, opened: false };
+      scene.add(mesh);
+      const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('rgba(240,217,154,0.6)'), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+      glow.scale.set(18, 18, 1);
+      mesh.add(glow);
+      mesh.userData.glowSprite = glow;
+      memoryMeshes.push(mesh);
+    });
+
+    let camDist = 420, camTheta = 0.9, camPhi = 1.15;
+    function updateCamera() {
+      camera.position.x = camDist * Math.sin(camPhi) * Math.sin(camTheta);
+      camera.position.y = camDist * Math.cos(camPhi);
+      camera.position.z = camDist * Math.sin(camPhi) * Math.cos(camTheta);
+      camera.lookAt(0,0,0);
+    }
+    updateCamera();
+
+    let dragging = false, lastX = 0, lastY = 0, moved = 0;
+    function down(x,y){ dragging = true; lastX = x; lastY = y; moved = 0; mount.style.cursor = 'grabbing'; }
+    function move(x,y){
+      if (!dragging) return;
+      const dx = x - lastX, dy = y - lastY;
+      moved += Math.abs(dx) + Math.abs(dy);
+      camTheta -= dx * 0.006;
+      camPhi = Math.min(Math.max(camPhi - dy * 0.006, 0.25), Math.PI - 0.25);
+      lastX = x; lastY = y;
+      updateCamera();
+    }
+    function up(x,y){
+      dragging = false;
+      mount.style.cursor = 'grab';
+      if (moved < 6) handleTap(x,y);
+    }
+
+    mount.addEventListener('mousedown', e => down(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+    window.addEventListener('mouseup', e => up(e.clientX, e.clientY));
+    mount.addEventListener('touchstart', e => { const t = e.touches[0]; down(t.clientX, t.clientY); }, { passive: true });
+    mount.addEventListener('touchmove', e => { const t = e.touches[0]; move(t.clientX, t.clientY); }, { passive: true });
+    mount.addEventListener('touchend', e => { up(lastX, lastY); }, { passive: true });
+
+    mount.addEventListener('wheel', e => {
+      camDist = Math.min(Math.max(camDist + e.deltaY * 0.3, 140), 1000);
+      updateCamera();
+    }, { passive: true });
+
+    const OPENED_COLOR = 0x123a8a;
+    const OPENED_GLOW = 'rgba(30,70,190,0.75)';
+
+    const raycaster = new THREE.Raycaster();
+    const mouseVec = new THREE.Vector2();
+    function handleTap(x, y) {
+      const rect = renderer.domElement.getBoundingClientRect();
+      mouseVec.x = ((x - rect.left) / rect.width) * 2 - 1;
+      mouseVec.y = -((y - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(mouseVec, camera);
+
+      const bhHits = raycaster.intersectObject(bhHitSphere);
+      if (bhHits.length) {
+        goToBeach();
+        return;
+      }
+
+      const hits = raycaster.intersectObjects(memoryMeshes);
+      if (hits.length) {
+        const obj = hits[0].object;
+        const d = obj.userData;
+        cardTitle.textContent = d.title;
+        cardText.textContent = d.text;
+        overlay.style.display = 'flex';
+
+        if (!d.opened) {
+          d.opened = true;
+          openedCount++;
+          counterEl.textContent = openedCount + '/' + totalMemories;
+          obj.material.color.setHex(OPENED_COLOR);
+          if (d.glowSprite) {
+            d.glowSprite.material.map = glowTexture(OPENED_GLOW);
+            d.glowSprite.material.needsUpdate = true;
+          }
+        }
+      }
+    }
+
+    function closeMemoryOverlay(){
+      overlay.style.display = 'none';
+      maybeShowFinal();
+    }
+    closeBtn.addEventListener('click', closeMemoryOverlay);
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeMemoryOverlay(); });
+
+    const BOUND = 550;
+    const dummy = new THREE.Object3D();
+    function animate() {
+      planets.forEach(p => {
+        p.angle += p.speed;
+        p.mesh.position.set(p.orbit * Math.cos(p.angle), 0, p.orbit * Math.sin(p.angle));
+        p.mesh.rotation.y += 0.01;
+      });
+      moons.forEach(m => { m.pivot.rotation.y += m.speed; });
+      sun.rotation.y += 0.001;
+      memoryMeshes.forEach(m => { m.rotation.y += 0.005; });
+
+      beltData.forEach((b, i) => {
+        b.angle += 0.0018 * (120 / b.radius);
+        b.rot.x += b.spin.x; b.rot.y += b.spin.y; b.rot.z += b.spin.z;
+        dummy.position.set(b.radius*Math.cos(b.angle), b.y, b.radius*Math.sin(b.angle));
+        dummy.rotation.set(b.rot.x, b.rot.y, b.rot.z);
+        dummy.scale.set(b.scaleX, b.scaleY, b.scaleZ);
+        dummy.updateMatrix();
+        beltMesh.setMatrixAt(i, dummy.matrix);
+      });
+      beltMesh.instanceMatrix.needsUpdate = true;
+
+      wanderers.forEach(w => {
+        w.mesh.position.add(w.vel);
+        w.mesh.rotation.x += w.spin.x; w.mesh.rotation.y += w.spin.y; w.mesh.rotation.z += w.spin.z;
+        if (w.mesh.position.x > BOUND) w.mesh.position.x = -BOUND;
+        if (w.mesh.position.x < -BOUND) w.mesh.position.x = BOUND;
+        if (w.mesh.position.z > BOUND) w.mesh.position.z = -BOUND;
+        if (w.mesh.position.z < -BOUND) w.mesh.position.z = BOUND;
+      });
+
+      cometPos.add(cometVel);
+      if (cometPos.x > BOUND || cometPos.x < -BOUND || cometPos.z > BOUND || cometPos.z < -BOUND) {
+        cometPos.set(-500, 60 + Math.random()*60, 300 + (Math.random()-0.5)*200);
+        trailHistory.length = 0;
+      }
+      comet.position.copy(cometPos);
+      comet.rotation.y += 0.02;
+      trailHistory.unshift(cometPos.clone());
+      if (trailHistory.length > trailLength) trailHistory.pop();
+      const posAttr = trailGeo.getAttribute('position');
+      for (let i=0;i<trailLength;i++){
+        const p = trailHistory[i] || cometPos;
+        posAttr.setXYZ(i, p.x, p.y, p.z);
+      }
+      posAttr.needsUpdate = true;
+
+      bhDisk.rotation.z += 0.004;
+
+      renderer.render(scene, camera);
+      requestAnimationFrame(animate);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      const w = mount.clientWidth, h = mount.clientHeight;
+      camera.aspect = w/h;
+      camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+  }
+})();
+</script>
+</body>
+</html>
